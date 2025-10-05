@@ -72,6 +72,8 @@ def plot_candlestick_with_extrema(
             name="Candlestick",
         )
     )
+
+
     # Low minimas
     fig.add_trace(
         go.Scatter(
@@ -82,46 +84,52 @@ def plot_candlestick_with_extrema(
             name="Low Minima",
         )
     )
-    # High maximas
-    fig.add_trace(
-        go.Scatter(
-            x=high_maxima.index,
-            y=high_maxima["High"],
-            mode="markers",
-            marker=dict(color="green", size=10),
-            name="High Maxima",
+    if not low_minima.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=low_minima.index,
+                y=low_minima["Low"],
+                mode="markers",
+                marker=dict(color="red", size=10),
+                name="Low Minima",
+            )
         )
-    )
-    fig.update_layout(
-        title="Candlestick Chart with Extrema",
-        xaxis_title="Date",
-        yaxis_title="Price",
-        xaxis_rangeslider_visible=False,
-    )
+    # High maximas
+    if not high_maxima.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=high_maxima.index,
+                y=high_maxima["High"],
+                mode="markers",
+                marker=dict(color="green", size=10),
+                name="High Maxima",
+            )
+        )
     # fig.show()
 
     # plot a line between first high and minimum low, then between minimum low and maximum high, then between maximum high and last low
     # A->B->C
-    fig.add_trace(
-        go.Scatter(
-            x=[
-                data.index.min(),
-                low_minima.index.min(),
-                high_maxima.index.max(),
-                data.index.max(),
-            ],
-            y=[
-                data["High"].iloc[0],
-                low_minima["Low"].iloc[0],
-                high_maxima["High"].iloc[0],
-                data["Low"].iloc[-1],
-            ],
-            mode="lines+markers",
-            line=dict(color="blue", width=2, dash="dash"),
-            marker=dict(color="blue", size=8),
-            name="A-B-C Line",
+    if not low_minima.empty and not high_maxima.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=[
+                    data.index.min(),
+                    low_minima.index.min(),
+                    high_maxima.index.max(),
+                    data.index.max(),
+                ],
+                y=[
+                    data["High"].iloc[0],
+                    low_minima["Low"].iloc[0],
+                    high_maxima["High"].iloc[0],
+                    data["Low"].iloc[-1],
+                ],
+                mode="lines+markers",
+                line=dict(color="blue", width=2, dash="dash"),
+                marker=dict(color="blue", size=8),
+                name="A-B-C Line",
+            )
         )
-    )
 
     return fig
 
@@ -131,10 +139,22 @@ def table_summary(data, low_minima, high_maxima) -> pd.DataFrame:
         {
             "A-Start-date": [data.index.min().strftime("%Y-%m-%d")],
             "A-High": [round(data["High"].iloc[0], 2)],
-            "AB-Start-date": [low_minima.index.min().strftime("%Y-%m-%d")],
-            "B-Low": [round(low_minima["Low"].iloc[0], 2)],
-            "BC-Start-date": [high_maxima.index.max().strftime("%Y-%m-%d")],
-            "C-High": [round(high_maxima["High"].iloc[0], 2)],
+            "AB-Start-date": [
+                low_minima.index.min().strftime("%Y-%m-%d")
+                if not low_minima.empty
+                else ""
+            ],
+            "B-Low": [
+                round(low_minima["Low"].iloc[0], 2) if not low_minima.empty else ""
+            ],
+            "BC-Start-date": [
+                high_maxima.index.max().strftime("%Y-%m-%d")
+                if not high_maxima.empty
+                else ""
+            ],
+            "C-High": [
+                round(high_maxima["High"].iloc[0], 2) if not high_maxima.empty else ""
+            ],
             "C-End-date": [data.index.max().strftime("%Y-%m-%d")],
             "C-Low": [round(data["Low"].iloc[-1], 2)],
         }
@@ -174,9 +194,14 @@ if process_button:
             high_maxima = find_extrema(
                 data, "High", prominence_factor=prominence_factor, maximum=True
             )
-            low_minima, high_maxima = ensure_maximum_after_minimum(
-                low_minima, high_maxima
-            )
+            if len(low_minima) > 1 or len(high_maxima) > 1:
+                low_minima, high_maxima = ensure_maximum_after_minimum(
+                    low_minima, high_maxima
+                )
+            elif low_minima.empty or high_maxima.empty:
+                st.warning(
+                    "Could not find sufficient extrema points, displaying what 'we have'"
+                )
 
         fig = plot_candlestick_with_extrema(data, low_minima, high_maxima)
         st.plotly_chart(fig, use_container_width=True)
