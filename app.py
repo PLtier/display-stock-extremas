@@ -56,12 +56,15 @@ def ensure_maximum_after_minimum(
     return minimum, maximum
 
 
-def plot_candlestick_with_extrema(
-    data: pd.DataFrame, low_minima: pd.DataFrame, high_maxima: pd.DataFrame
-) -> go.Figure:
+def plot_candlestick(fig: go.Figure, data: pd.DataFrame) -> None:
     """Plot a candlestick chart with extrema points using Plotly."""
-    fig = go.Figure()
     # Candlestick
+    fig.update_layout(
+        title="Candlestick Chart with Extrema",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        xaxis_rangeslider_visible=False,
+    )
     fig.add_trace(
         go.Candlestick(
             x=data.index,
@@ -74,16 +77,12 @@ def plot_candlestick_with_extrema(
     )
 
 
-    # Low minimas
-    fig.add_trace(
-        go.Scatter(
-            x=low_minima.index,
-            y=low_minima["Low"],
-            mode="markers",
-            marker=dict(color="red", size=10),
-            name="Low Minima",
-        )
-    )
+def plot_extrema(
+    fig: go.Figure,
+    data: pd.DataFrame,
+    low_minima: pd.DataFrame,
+    high_maxima: pd.DataFrame,
+) -> None:
     if not low_minima.empty:
         fig.add_trace(
             go.Scatter(
@@ -130,8 +129,6 @@ def plot_candlestick_with_extrema(
                 name="A-B-C Line",
             )
         )
-
-    return fig
 
 
 def table_summary(data, low_minima, high_maxima) -> pd.DataFrame:
@@ -188,6 +185,10 @@ if process_button:
         with st.spinner("Fetching and processing data..."):
             data = fetch_data(ticker, start_date, end_date)
             data = clean_data(data)
+            fig = go.Figure()
+
+            plot_candlestick(fig, data)
+
             low_minima = find_extrema(
                 data, "Low", prominence_factor=prominence_factor, maximum=False
             )
@@ -202,8 +203,8 @@ if process_button:
                 st.warning(
                     "Could not find sufficient extrema points, displaying what 'we have'"
                 )
+            plot_extrema(fig, data, low_minima, high_maxima)
 
-        fig = plot_candlestick_with_extrema(data, low_minima, high_maxima)
         st.plotly_chart(fig, use_container_width=True)
         st.table(table_summary(data, low_minima, high_maxima))
     except Exception as e:
