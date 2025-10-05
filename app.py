@@ -11,7 +11,7 @@ st.title("Stock Extrema Finder")
 
 
 # LOGIC
-@st.cache_data(ttl=3600, show_spinner=False)
+# @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_data(ticker: str, start_date: date, end_date: date) -> pd.DataFrame:
     """Fetch historical data for a given ticker and date range using yfinance."""
     data = yf.download(ticker, start=start_date, end=end_date + timedelta(days=1))
@@ -183,3 +183,8 @@ if process_button:
         st.table(table_summary(data, low_minima, high_maxima))
     except Exception as e:
         st.error(f"An error occurred: {e}")
+#
+# if st.button("Clear Cache"):
+#     # Clear all st.cache_data caches
+#     st.cache_data.clear()
+#     st.write("Cache cleared!")
